@@ -497,17 +497,21 @@ jboolean setNetworkVariable(char *buf)
     char interface[BUF_SIZE] = {0};
     char dummy[BUF_SIZE] = {0};
     char ssid[BUF_SIZE] = {0};
+
     if (strnlen(buf, BUF_SIZE) == BUF_SIZE) {
-        ALOGE("setNetworkVariable failed due to invalid length");
-        return JNI_FALSE;
+        ALOGI("setNetworkVariable - not set_network ssid, skip.");
+        return JNI_TRUE;
     }
 
     /* parse SET_NETWORK command*/
     sscanf(buf, "%s %s %d %s %s", interface, dummy, &netId, name, value);
 
-    /* L Framework will convert string to HEX, so we convert it back here for comparation */
     if (0 == strncmp(name, "ssid", 4)) {
+        /* Convert it back from HEX to string */
         createFromHex(ssid, BUF_SIZE, value);
+    } else {
+        /* So far only interested in ssid conversion */
+        return JNI_TRUE;
     }
 
     if (DBG)
@@ -516,9 +520,6 @@ jboolean setNetworkVariable(char *buf)
 
     pthread_mutex_lock(g_pItemListMutex);
     pTmpItemNode = g_pItemList;
-    if (NULL == pTmpItemNode) {
-        ALOGE("g_pItemList is NULL");
-    }
     while (pTmpItemNode) {
         if (pTmpItemNode->ssid_utf8) {
             ALOGD("ssid_utf8 = %s, length=%d, value =%s, length=%d",
@@ -534,12 +535,9 @@ jboolean setNetworkVariable(char *buf)
 
     if (0 == strncmp(name, "ssid", 4) && gbk_found) {
         snprintf(buf, BUF_SIZE, "%s SET_NETWORK %d ssid \"%s\"", interface, netId, pTmpItemNode->ssid->string());
-    if (DBG)
-        ALOGD("new SET_NETWORK command is: %s", buf);
+        ALOGI("new command is: %s", buf);
     }
-
     pthread_mutex_unlock(g_pItemListMutex);
-
 
     return JNI_TRUE;
 }
